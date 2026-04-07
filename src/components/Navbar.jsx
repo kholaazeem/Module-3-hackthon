@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, Shield, GraduationCap, LogOut } from 'lucide-react';
 import { useSelector, useDispatch } from 'react-redux';
-import { logout } from '../redux/slices/authSlice';
+import { logoutUser } from '../redux/slices/authSlice';
 
 const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
@@ -29,7 +29,7 @@ const Navbar = () => {
   ];
 
   const handleLogout = () => {
-    dispatch(logout());
+    dispatch(logoutUser());
   };
 
   return (
