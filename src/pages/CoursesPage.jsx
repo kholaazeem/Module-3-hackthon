@@ -1,25 +1,34 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchCourses } from '../redux/slices/courseSlice';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import Modal from '../components/Modal';
-import { BookOpen, Clock, User, CheckCircle } from 'lucide-react';
+import { BookOpen, Clock, User, CheckCircle, Loader2 } from 'lucide-react';
 import Swal from 'sweetalert2';
 
 const CoursesPage = () => {
-  // Mock Data (Jab aap context ya database connect karengi toh isko replace kar dijiyega)
-  const [courses] = useState([
-    { id: '1', title: 'Web Development Bootcamp', category: 'Programming', description: 'Master the MERN stack from scratch. Build real-world projects with React and Node.js.', duration: '6 Months', instructor: 'Ali Khan', status: 'Open' },
-    { id: '2', title: 'Data Science & AI', category: 'Data Science', description: 'Deep dive into Python, Machine Learning, and Neural Networks with practical datasets.', duration: '8 Months', instructor: 'Sara Ahmed', status: 'Closed' },
-    { id: '3', title: 'UI/UX Design Masterclass', category: 'Design', description: 'Learn Figma, user research, wireframing, and modern web design principles.', duration: '3 Months', instructor: 'Zainab', status: 'Open' },
-    { id: '4', title: 'Mobile App Development', category: 'Programming', description: 'Build cross-platform mobile applications using React Native and Firebase.', duration: '4 Months', instructor: 'Usman', status: 'Open' },
-  ]);
+  const dispatch = useDispatch();
+  
+  // Redux se dynamic courses fetch kar rahe hain
+  const { items: courses, status } = useSelector((state) => state.courses);
 
   const [applyModal, setApplyModal] = useState(null);
   const [filter, setFilter] = useState('All');
   const [formData, setFormData] = useState({ name: '', email: '' });
 
-  const categories = ['All', ...new Set(courses.map(c => c.category))];
-  const filtered = filter === 'All' ? courses : courses.filter(c => c.category === filter);
+  // Page load hone par agar data nahi hai toh fetch karein
+  useEffect(() => {
+    if (status === 'idle') {
+      dispatch(fetchCourses());
+    }
+  }, [dispatch, status]);
+
+  // Dynamic categories nikal rahe hain (Sirf unhi categories ke button banenge jo DB mein hain)
+  const categories = ['All', ...new Set(courses.map(c => c.category || 'General'))];
+  
+  // Filter logic
+  const filtered = filter === 'All' ? courses : courses.filter(c => (c.category || 'General') === filter);
   const selectedCourse = courses.find(c => c.id === applyModal);
 
   const handleApply = (e) => {
@@ -27,10 +36,11 @@ const CoursesPage = () => {
     setApplyModal(null);
     setFormData({ name: '', email: '' });
     
+    // Public page par demo application submission message
     Swal.fire({
       icon: 'success',
-      title: 'Application Submitted!',
-      text: `Thank you, ${formData.name}. You have successfully applied for ${selectedCourse?.title}. We'll contact you soon.`,
+      title: 'Application Received!',
+      text: `Thank you, ${formData.name}. Your interest in "${selectedCourse?.title}" has been recorded. Our team will contact you soon.`,
       confirmButtonColor: 'hsl(160, 45%, 28%)',
       timer: 3000
     });
@@ -70,63 +80,70 @@ const CoursesPage = () => {
             ))}
           </div>
 
-          {/* Courses Grid */}
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filtered.map((course, i) => (
-              <div 
-                key={course.id} 
-                className="group flex flex-col p-1 rounded-2xl bg-card border border-border shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-2" 
-                style={{ animationDelay: `${i * 0.1}s` }}
-              >
-                <div className="p-6 flex flex-col h-full bg-card rounded-[15px]">
-                  
-                  {/* Decorative Banner inside Card */}
-                  <div className="w-full h-32 rounded-xl bg-gradient-to-br from-primary/80 to-primary mb-6 flex items-center justify-center relative overflow-hidden shadow-inner">
-                    <BookOpen className="w-12 h-12 text-white/30 group-hover:scale-125 transition-transform duration-500" />
-                    <span className={`absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-bold shadow-sm ${
-                      course.status === 'Open' ? 'bg-white text-emerald-600' : 'bg-white/90 text-red-600'
-                    }`}>
-                      {course.status === 'Open' ? 'Admissions Open' : 'Closed'}
-                    </span>
-                  </div>
-
-                  {/* Course Details */}
-                  <span className="text-xs font-bold text-primary mb-2 uppercase tracking-wider">{course.category}</span>
-                  <h3 className="font-bold text-xl text-foreground mb-2 leading-tight">{course.title}</h3>
-                  <p className="text-sm text-muted-foreground mb-6 line-clamp-3">{course.description}</p>
-                  
-                  {/* Meta Info */}
-                  <div className="mt-auto space-y-3 mb-6 pt-4 border-t border-border">
-                    <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                      <Clock className="w-4 h-4 text-primary" /> {course.duration}
+          {/* Courses Grid / Loading State */}
+          {status === 'loading' ? (
+            <div className="flex flex-col items-center justify-center py-20">
+              <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />
+              <h3 className="text-lg font-semibold text-foreground">Loading premium courses...</h3>
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {filtered.map((course, i) => (
+                <div 
+                  key={course.id} 
+                  className="group flex flex-col p-1 rounded-2xl bg-card border border-border shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-2" 
+                  style={{ animationDelay: `${i * 0.1}s` }}
+                >
+                  <div className="p-6 flex flex-col h-full bg-card rounded-[15px]">
+                    
+                    {/* Decorative Banner inside Card */}
+                    <div className="w-full h-32 rounded-xl bg-gradient-to-br from-primary/80 to-primary mb-6 flex items-center justify-center relative overflow-hidden shadow-inner">
+                      <BookOpen className="w-12 h-12 text-white/30 group-hover:scale-125 transition-transform duration-500" />
+                      <span className={`absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-bold shadow-sm ${
+                        course.status === 'Open' ? 'bg-white text-emerald-600' : 'bg-white/90 text-red-600'
+                      }`}>
+                        {course.status === 'Open' ? 'Admissions Open' : 'Closed'}
+                      </span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                      <User className="w-4 h-4 text-primary" /> Instructor: {course.instructor}
-                    </div>
-                  </div>
 
-                  {/* Action Button */}
-                  <button
-                    disabled={course.status === 'Closed'}
-                    onClick={() => setApplyModal(course.id)}
-                    className={`w-full py-3.5 rounded-xl text-[15px] font-bold transition-all flex justify-center items-center gap-2 ${
-                      course.status === 'Open'
-                        ? 'bg-primary text-primary-foreground hover:opacity-90 hover:scale-[1.02] shadow-md'
-                        : 'bg-muted text-muted-foreground cursor-not-allowed'
-                    }`}
-                  >
-                    {course.status === 'Open' ? 'Apply Now' : 'Registration Closed'}
-                  </button>
+                    {/* Course Details */}
+                    <span className="text-xs font-bold text-primary mb-2 uppercase tracking-wider">{course.category || 'General'}</span>
+                    <h3 className="font-bold text-xl text-foreground mb-2 leading-tight">{course.title}</h3>
+                    <p className="text-sm text-muted-foreground mb-6 line-clamp-3">{course.description}</p>
+                    
+                    {/* Meta Info */}
+                    <div className="mt-auto space-y-3 mb-6 pt-4 border-t border-border">
+                      <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                        <Clock className="w-4 h-4 text-primary" /> {course.duration || 'N/A'}
+                      </div>
+                      <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                        <User className="w-4 h-4 text-primary" /> Instructor: {course.instructor || 'TBD'}
+                      </div>
+                    </div>
+
+                    {/* Action Button */}
+                    <button
+                      disabled={course.status === 'Closed'}
+                      onClick={() => setApplyModal(course.id)}
+                      className={`w-full py-3.5 rounded-xl text-[15px] font-bold transition-all flex justify-center items-center gap-2 ${
+                        course.status === 'Open'
+                          ? 'bg-primary text-primary-foreground hover:opacity-90 hover:scale-[1.02] shadow-md'
+                          : 'bg-muted text-muted-foreground cursor-not-allowed'
+                      }`}
+                    >
+                      {course.status === 'Open' ? 'Apply Now' : 'Registration Closed'}
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
 
-            {filtered.length === 0 && (
-              <div className="col-span-full py-20 text-center">
-                <p className="text-muted-foreground text-lg">No courses found in this category.</p>
-              </div>
-            )}
-          </div>
+              {filtered.length === 0 && (
+                <div className="col-span-full py-20 text-center">
+                  <p className="text-muted-foreground text-lg">No courses found in this category.</p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </main>
 
@@ -141,7 +158,7 @@ const CoursesPage = () => {
               <CheckCircle className="w-6 h-6 text-primary shrink-0 mt-0.5" />
               <div>
                 <div className="font-bold text-foreground text-lg">{selectedCourse.title}</div>
-                <div className="text-sm text-muted-foreground mt-1 font-medium">{selectedCourse.duration} • Taught by {selectedCourse.instructor}</div>
+                <div className="text-sm text-muted-foreground mt-1 font-medium">{selectedCourse.duration || 'N/A'} • Taught by {selectedCourse.instructor || 'TBD'}</div>
               </div>
             </div>
 

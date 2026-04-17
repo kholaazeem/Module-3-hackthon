@@ -49,9 +49,14 @@ const LoginPage = () => {
         return;
       }
 
-      // Success logic
+      // Success logic (Yahan ID add ki gayi hai taake Student Panel mein error na aaye)
       dispatch(loginSuccess({ 
-        user: { name: userRecord.username, cnic: userRecord.cnic, username: userRecord.username }, 
+        user: { 
+          id: userRecord.id, // <-- YE LINE ADD KI HAI
+          name: userRecord.username, 
+          cnic: userRecord.cnic, 
+          username: userRecord.username 
+        }, 
         role: userRecord.role 
       }));
       

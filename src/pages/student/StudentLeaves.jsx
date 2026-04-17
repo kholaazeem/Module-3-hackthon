@@ -1,38 +1,71 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { applyForLeave, fetchMyLeaves } from '../../redux/slices/leaveSlice';
 import DashboardLayout from '../../components/DashboardLayout';
-import { CalendarDays, Upload, Send, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { CalendarDays, Upload, Send, Clock, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import Swal from 'sweetalert2';
 
 const StudentLeaves = () => {
+  const dispatch = useDispatch();
   const [form, setForm] = useState({ reason: '', startDate: '', endDate: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Demo Data (Local State)
-  const [leaves, setLeaves] = useState([
-    { id: '1', reason: 'Fever and severe headache', startDate: '2026-04-01', endDate: '2026-04-03', status: 'Approved', appliedOn: '2026-03-31' },
-    { id: '2', reason: 'Family wedding out of city', startDate: '2026-03-15', endDate: '2026-03-16', status: 'Rejected', appliedOn: '2026-03-10' },
-  ]);
+  const { items: leaves, status } = useSelector((state) => state.leaves);
+  const { user } = useSelector((state) => state.auth);
 
-  const handleSubmit = (e) => {
+  useEffect(() => {
+    if (user?.id) {
+      dispatch(fetchMyLeaves(user.id));
+    }
+  }, [dispatch, user]);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
-    const newLeave = {
-      id: Date.now().toString(),
+    if (!user?.id) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Authentication Error',
+        text: 'User ID is missing. Please log in again.',
+        confirmButtonColor: 'hsl(160, 45%, 28%)'
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    
+    // Payload matching your exact Supabase table schema
+    const leaveData = {
+      student_id: user.id,
+      student_name: user.name || user.username || 'Student',
       reason: form.reason,
-      startDate: form.startDate,
-      endDate: form.endDate,
-      status: 'Pending',
-      appliedOn: new Date().toISOString().split('T')[0]
+      start_date: form.startDate,
+      end_date: form.endDate,
+      status: 'Pending'
+      // 'created_at' is handled automatically by Supabase
     };
 
-    setLeaves([newLeave, ...leaves]);
-    setForm({ reason: '', startDate: '', endDate: '' });
-    
-    Swal.fire({ 
-      icon: 'success', 
-      title: 'Application Sent!', 
-      text: 'Your leave request has been submitted to the administration.', 
-      confirmButtonColor: 'hsl(160, 45%, 28%)' 
-    });
+    try {
+      await dispatch(applyForLeave(leaveData)).unwrap();
+      
+      setForm({ reason: '', startDate: '', endDate: '' });
+      
+      Swal.fire({ 
+        icon: 'success', 
+        title: 'Application Sent!', 
+        text: 'Your leave request has been submitted to the administration.', 
+        confirmButtonColor: 'hsl(160, 45%, 28%)' 
+      });
+    } catch (error) {
+      Swal.fire({ 
+        icon: 'error', 
+        title: 'Submission Failed', 
+        text: error.message || 'Could not send the leave request.', 
+        confirmButtonColor: 'hsl(160, 45%, 28%)' 
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -95,8 +128,16 @@ const StudentLeaves = () => {
                 <p className="text-xs text-muted-foreground mt-1">Medical certificate etc. (PDF, JPG)</p>
               </div>
 
-              <button type="submit" className="w-full py-3.5 mt-2 rounded-xl bg-primary text-primary-foreground font-bold text-[15px] hover:opacity-90 hover:scale-[1.01] transition-all shadow-md flex justify-center items-center gap-2">
-                <Send className="w-4 h-4" /> Submit Application
+              <button 
+                type="submit" 
+                disabled={isSubmitting}
+                className="w-full py-3.5 mt-2 rounded-xl bg-primary text-primary-foreground font-bold text-[15px] hover:opacity-90 hover:scale-[1.01] transition-all shadow-md flex justify-center items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+              >
+                {isSubmitting ? (
+                  <><Loader2 className="w-5 h-5 animate-spin" /> Submitting...</>
+                ) : (
+                  <><Send className="w-5 h-5" /> Submit Application</>
+                )}
               </button>
             </form>
           </div>
@@ -105,7 +146,12 @@ const StudentLeaves = () => {
           <div>
             <h2 className="text-xl font-bold text-foreground mb-6 lg:mt-0 mt-4">Application History</h2>
             
-            {leaves.length === 0 ? (
+            {status === 'loading' ? (
+              <div className="p-10 text-center rounded-2xl bg-card border border-border flex flex-col items-center justify-center">
+                 <Loader2 className="w-8 h-8 text-primary animate-spin mb-2" />
+                 <p className="text-muted-foreground font-medium">Fetching history...</p>
+              </div>
+            ) : leaves.length === 0 ? (
               <div className="p-10 text-center rounded-2xl bg-card border border-border border-dashed">
                 <CalendarDays className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
                 <p className="text-muted-foreground font-medium">No leave requests found.</p>
@@ -118,10 +164,11 @@ const StudentLeaves = () => {
                     <div className="flex-1">
                       <div className="font-bold text-foreground text-[15px] mb-1">{l.reason}</div>
                       <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1.5"><CalendarDays className="w-3.5 h-3.5" /> {l.startDate} to {l.endDate}</span>
+                        <span className="flex items-center gap-1.5"><CalendarDays className="w-3.5 h-3.5" /> {l.start_date} to {l.end_date}</span>
                       </div>
                       <div className="text-xs text-muted-foreground/70 mt-3 font-medium">
-                        Applied on: {l.appliedOn}
+                        {/* Formatting the timestamp to just show the date */}
+                        Applied on: {new Date(l.created_at).toLocaleDateString()}
                       </div>
                     </div>
                     

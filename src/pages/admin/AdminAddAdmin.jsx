@@ -1,30 +1,58 @@
 import React, { useState } from 'react';
 import DashboardLayout from '../../components/DashboardLayout';
-import { ShieldCheck, User, AtSign, Lock, UserPlus } from 'lucide-react';
+import { ShieldCheck, User, AtSign, Lock, UserPlus, Loader2 } from 'lucide-react';
 import Swal from 'sweetalert2';
+import { supabase } from '../../supabase/supabaseClient'; 
 
 const AdminAddAdmin = () => {
-  // Context aapke paas already hai, maine demo run ke liye comment kar diya
-  // const { setAdmins } = useApp(); 
-  
   const [form, setForm] = useState({ name: '', username: '', password: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Yahan aap apna context set kar sakte hain
-    // setAdmins(prev => [...prev, { ...form, id: Date.now().toString() }]);
-    
-    Swal.fire({ 
-      icon: 'success', 
-      title: 'Admin Created!', 
-      text: `${form.name} has been granted administrative privileges.`, 
-      confirmButtonColor: 'hsl(160, 45%, 28%)',
-      showConfirmButton: false,
-      timer: 2000
-    });
-    
-    setForm({ name: '', username: '', password: '' });
+    setIsSubmitting(true);
+
+    try {
+      // Supabase ke 'app_users' table mein naya admin add kar rahe hain
+      const { error } = await supabase
+        .from('app_users')
+        .insert([
+          { 
+            username: form.username, 
+            password: form.password, 
+            role: 'admin',
+            // Agar aapke table mein 'name' ka column majood hai toh usmein full name save hoga
+            // Agar database mein error aaye (Column 'name' not found), toh aap is line ko hata sakti hain
+          }
+        ]);
+
+      if (error) {
+        throw error;
+      }
+
+      Swal.fire({ 
+        icon: 'success', 
+        title: 'Admin Created!', 
+        text: `${form.name} has been granted administrative privileges.`, 
+        confirmButtonColor: 'hsl(160, 45%, 28%)',
+        showConfirmButton: false,
+        timer: 2000
+      });
+      
+      // Form ko khali kar rahe hain
+      setForm({ name: '', username: '', password: '' });
+      
+    } catch (error) {
+      console.error("Admin creation error:", error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Creation Failed',
+        text: error.message || 'Could not create new admin account. Check if username already exists.',
+        confirmButtonColor: 'hsl(160, 45%, 28%)'
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -104,9 +132,14 @@ const AdminAddAdmin = () => {
             {/* Submit Button */}
             <button 
               type="submit" 
-              className="w-full py-3.5 mt-4 rounded-xl bg-primary text-primary-foreground font-bold text-[15px] hover:opacity-90 hover:scale-[1.01] hover:shadow-lg transition-all flex justify-center items-center gap-2"
+              disabled={isSubmitting}
+              className="w-full py-3.5 mt-4 rounded-xl bg-primary text-primary-foreground font-bold text-[15px] hover:opacity-90 hover:scale-[1.01] hover:shadow-lg transition-all flex justify-center items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              <UserPlus className="w-5 h-5" /> Create Admin Account
+              {isSubmitting ? (
+                <><Loader2 className="w-5 h-5 animate-spin" /> Creating...</>
+              ) : (
+                <><UserPlus className="w-5 h-5" /> Create Admin Account</>
+              )}
             </button>
             
           </form>

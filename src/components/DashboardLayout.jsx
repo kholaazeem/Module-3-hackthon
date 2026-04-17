@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { logoutUser } from '../redux/slices/authSlice';
+import Swal from 'sweetalert2';
 import { 
   LayoutDashboard, Users, BookOpen, CalendarDays, UserPlus, 
-  LogOut, Menu, X, GraduationCap, Home, ChevronLeft, ChevronRight, FileText
+  LogOut, Menu, X, GraduationCap, Home, ChevronLeft, ChevronRight, FileText, Megaphone
 } from 'lucide-react';
 
 const DashboardLayout = ({ children }) => {
@@ -18,21 +19,42 @@ const DashboardLayout = ({ children }) => {
 
   const isAdmin = role === 'admin';
 
+  // SweetAlert wala Premium Logout
   const handleLogout = () => {
-    dispatch(logoutUser());
-    navigate('/login');
+    Swal.fire({
+      title: 'Logout?',
+      text: "Are you sure you want to log out?",
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: 'hsl(160, 45%, 28%)',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Yes, Logout'
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        await dispatch(logoutUser()).unwrap();
+        navigate('/'); 
+        Swal.fire({
+          icon: 'success',
+          title: 'Logged Out',
+          text: 'You have been successfully logged out.',
+          timer: 1500,
+          showConfirmButton: false
+        });
+      }
+    });
   };
 
-  // Admin Links (Updated per your TS code)
+  // Admin Links (Announcements link added here)
   const adminLinks = [
     { label: 'Overview', path: '/admin', icon: LayoutDashboard },
     { label: 'Students', path: '/admin/students', icon: Users },
     { label: 'Courses', path: '/admin/courses', icon: BookOpen },
     { label: 'Leave Requests', path: '/admin/leaves', icon: CalendarDays },
+    { label: 'Announcements', path: '/admin/announcements', icon: Megaphone },
     { label: 'Add Admin', path: '/admin/add-admin', icon: UserPlus },
   ];
 
-  // Student Links (Updated per your TS code)
+  // Student Links
   const studentLinks = [
     { label: 'Dashboard', path: '/student', icon: LayoutDashboard },
     { label: 'Course Portal', path: '/student/courses', icon: BookOpen },
@@ -43,7 +65,6 @@ const DashboardLayout = ({ children }) => {
   const links = isAdmin ? adminLinks : studentLinks;
 
   return (
-    /* Root container set to 100vh and full width to prevent layout collapsing */
     <div className="flex h-screen w-full bg-background overflow-hidden">
       
       {/* Mobile Sidebar Overlay */}

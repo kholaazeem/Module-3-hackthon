@@ -16,17 +16,17 @@ import AdminStudents from './pages/admin/AdminStudents';
 import AdminCourses from './pages/admin/AdminCourses';
 import AdminLeaves from './pages/admin/AdminLeaves';
 import AdminAddAdmin from './pages/admin/AdminAddAdmin';
+import AdminAnnouncements from './pages/admin/AdminAnnouncements'; // <-- Added
 
 // Student Pages
 import StudentDashboard from './pages/student/StudentDashboard';
-import StudentCourses from './pages/student/StudentCourses'; // <-- Added
-import StudentLeaves from './pages/student/StudentLeaves';   // <-- Added (Use StudentApplyLeave here if you used the standalone file name)
+import StudentCourses from './pages/student/StudentCourses'; 
+import StudentLeaves from './pages/student/StudentLeaves';   
 import Announcements from './pages/student/Announcements';
 import CoursesPage from './pages/CoursesPage';
 
-
 // ==========================================
-// 1. PUBLIC ROUTE (Login/Signup k liye)
+// 1. PUBLIC ROUTE (For Login/Signup)
 // ==========================================
 const PublicRoute = ({ children }) => {
   const { isAuthenticated, role } = useSelector((state) => state.auth);
@@ -39,7 +39,7 @@ const PublicRoute = ({ children }) => {
 };
 
 // ==========================================
-// 2. PROTECTED ROUTE (Dashboards k liye)
+// 2. PROTECTED ROUTE (For Dashboards)
 // ==========================================
 const ProtectedRoute = ({ children, allowedRole }) => {
   const { isAuthenticated, role } = useSelector((state) => state.auth);
@@ -111,13 +111,17 @@ function App() {
           path="/admin/add-admin" 
           element={<ProtectedRoute allowedRole="admin"><AdminAddAdmin /></ProtectedRoute>} 
         />
+        {/* New Admin Route Registered Here */}
+        <Route 
+          path="/admin/announcements" 
+          element={<ProtectedRoute allowedRole="admin"><AdminAnnouncements /></ProtectedRoute>} 
+        />
 
         {/* === Student Routes === */}
         <Route 
           path="/student" 
           element={<ProtectedRoute allowedRole="student"><StudentDashboard /></ProtectedRoute>} 
         />
-        {/* New Student Routes Registered Here */}
         <Route 
           path="/student/courses" 
           element={<ProtectedRoute allowedRole="student"><StudentCourses /></ProtectedRoute>} 
@@ -126,13 +130,10 @@ function App() {
           path="/student/leave" 
           element={<ProtectedRoute allowedRole="student"><StudentLeaves /></ProtectedRoute>} 
         />
-
          <Route 
           path="/student/announcements" 
           element={<ProtectedRoute allowedRole="student"><Announcements /></ProtectedRoute>} 
         />
-      
-
 
         {/* === Catch-All (404 Page Not Found) === */}
         <Route path="*" element={<NotFoundPage />} />
